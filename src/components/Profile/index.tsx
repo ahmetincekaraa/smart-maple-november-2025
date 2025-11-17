@@ -24,10 +24,13 @@ const ProfileCard = ({ profile }: ProfileCardProps) => {
     }
   } else {
     const sessionRole = AuthSession.getRoles();
-    if(sessionRole && typeof sessionRole === 'object' && sessionRole !== null) {
-      roleDisplay = sessionRole.name || String(sessionRole);
-    } else if(sessionRole) {
-      roleDisplay = String(sessionRole);
+    if(sessionRole) {
+      if(typeof sessionRole === 'object' && sessionRole !== null) {
+        const roleObj = sessionRole as { name?: string };
+        roleDisplay = roleObj.name || String(sessionRole);
+      } else {
+        roleDisplay = String(sessionRole);
+      }
     } else {
       roleDisplay = "User";
     }

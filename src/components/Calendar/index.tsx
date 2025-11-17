@@ -89,19 +89,39 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
     return dates;
   };
 
-  const getColorForStaff = (staffId: string, shiftId: string) => {
-    const staffIndex = schedule?.staffs?.findIndex(s => s.id === staffId);
-    const shiftIndex = schedule?.shifts?.findIndex(s => s.id === shiftId);
+  const getShiftColor = (shiftName: string, shiftStart?: string, shiftEnd?: string) => {
+    if (!shiftName) return 'bg-shift-day';
     
-    const colorClasses = [
-      "bg-one", "bg-two", "bg-three", "bg-four", "bg-five", 
-      "bg-six", "bg-seven", "bg-eight", "bg-nine", "bg-ten",
-      "bg-eleven", "bg-twelve", "bg-thirteen", "bg-fourteen", "bg-fifteen",
-      "bg-sixteen", "bg-seventeen", "bg-eighteen", "bg-nineteen", "bg-twenty"
-    ];
+    const nameLower = shiftName.toLowerCase().trim();
     
-    const index = (staffIndex + shiftIndex) % colorClasses.length;
-    return colorClasses[index];
+    if (nameLower.includes('izin') || nameLower.includes('off') || nameLower.includes('tatil')) {
+      return 'bg-shift-off';
+    }
+    
+    if (nameLower.includes('night') || nameLower.includes('gece')) {
+      return 'bg-shift-night';
+    }
+    
+    if (nameLower.includes('morning') || nameLower.includes('sabah') || 
+        nameLower.includes('öğlen') || nameLower.includes('oglen') || 
+        nameLower.includes('noon') || nameLower.includes('afternoon')) {
+      return 'bg-shift-noon';
+    }
+    
+    if (shiftStart && shiftEnd) {
+      const startHour = parseInt(shiftStart.split(':')[0]);
+      const endHour = parseInt(shiftEnd.split(':')[0]);
+      
+      if (startHour >= 20 || (endHour <= 6 && endHour > 0)) {
+        return 'bg-shift-night';
+      }
+      
+      if (startHour >= 8 && startHour <= 14) {
+        return 'bg-shift-noon';
+      }
+    }
+    
+    return 'bg-shift-day';
   };
 
   const generateStaffBasedCalendar = () => {
@@ -122,11 +142,13 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
         .format("YYYY-MM-DD");
       const isValidDate = validDates().includes(assignmentDate);
       
-      const colorClass = getColorForStaff(filteredAssignments[i]?.staffId, filteredAssignments[i]?.shiftId);
+      const shift = getShiftById(filteredAssignments[i]?.shiftId);
+      const shiftName = shift?.name || "Shift";
+      const colorClass = getShiftColor(shiftName, shift?.shiftStart, shift?.shiftEnd);
 
       const work = {
         id: filteredAssignments[i]?.id,
-        title: getShiftById(filteredAssignments[i]?.shiftId)?.name || "Shift",
+        title: shiftName,
         duration: "01:00",
         date: assignmentDate,
         staffId: filteredAssignments[i]?.staffId,
@@ -169,7 +191,14 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
         if(pair.startDate && pair.endDate) {
           const pairStaff = schedule?.staffs?.find(s => s.id === pair.pairStaffId);
           if(pairStaff) {
-            const pairColor = getColorForStaff(pair.pairStaffId, "");
+            const pairShift = schedule?.assignments?.find(a => a.staffId === pair.pairStaffId);
+            let pairColor = 'bg-shift-noon';
+            if(pairShift) {
+              const shift = getShiftById(pairShift.shiftId);
+              if(shift) {
+                pairColor = getShiftColor(shift.name, shift.shiftStart, shift.shiftEnd);
+              }
+            }
             const pairDates = getDatesBetween(pair.startDate, pair.endDate);
             
             pairDates.forEach(date => {
@@ -211,8 +240,8 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
       <div className="calendar-section">
         <div className="calendar-wrapper">
           <div style={{textAlign: 'center', padding: '40px', color: '#666'}}>
-            <h3>Loading schedule data...</h3>
-            <p>Please wait while we load the calendar information.</p>
+          <h3>Loading schedule data...</h3>
+          <p>Please wait while we load the calendar information.</p>
           </div>
         </div>
       </div>
@@ -225,24 +254,24 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
         <div className="event-popup-overlay" onClick={() => setShowPopup(false)}>
           <div className="event-popup" onClick={(e) => e.stopPropagation()}>
             <div className="popup-header">
-              <h3>Event Detayları</h3>
+              <h3>Event Details</h3>
               <button className="close-btn" onClick={() => setShowPopup(false)}>×</button>
             </div>
             <div className="popup-content">
               <div className="popup-row">
-                <strong>Personel:</strong> <span>{selectedEvent.staffName}</span>
+                <strong>Staff:</strong> <span>{selectedEvent.staffName}</span>
               </div>
               <div className="popup-row">
-                <strong>Vardiya:</strong> <span>{selectedEvent.shiftName}</span>
+                <strong>Shift:</strong> <span>{selectedEvent.shiftName}</span>
               </div>
               <div className="popup-row">
-                <strong>Tarih:</strong> <span>{selectedEvent.date}</span>
+                <strong>Date:</strong> <span>{selectedEvent.date}</span>
               </div>
               <div className="popup-row">
-                <strong>Başlangıç:</strong> <span>{selectedEvent.startTime}</span>
+                <strong>Start:</strong> <span>{selectedEvent.startTime}</span>
               </div>
               <div className="popup-row">
-                <strong>Bitiş:</strong> <span>{selectedEvent.endTime}</span>
+                <strong>End:</strong> <span>{selectedEvent.endTime}</span>
               </div>
             </div>
           </div>
@@ -274,7 +303,7 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
           ref={calendarRef}
           locale={auth?.language || "en"}
           plugins={getPlugins()}
-          contentHeight={400}
+          contentHeight="auto"
           handleWindowResize={true}
           selectable={true}
           editable={true}
@@ -285,8 +314,46 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
           events={events}
           firstDay={1}
           dayMaxEventRows={4}
-          fixedWeekCount={true}
+          fixedWeekCount={false}
           showNonCurrentDates={true}
+          headerToolbar={{
+            left: 'prev,next today',
+            center: 'title',
+            right: 'datePicker'
+          }}
+          buttonText={{
+            today: 'Today'
+          }}
+          customButtons={{
+            datePicker: {
+              text: 'Date',
+              hint: 'Go to date',
+              click: function() {
+                const dateInput = document.createElement('input');
+                dateInput.type = 'date';
+                dateInput.style.cssText = 'position:fixed;opacity:0;pointer-events:none;z-index:-1;';
+                
+                const handleChange = (e: Event) => {
+                  const target = e.target as HTMLInputElement;
+                  if (target.value && calendarRef.current) {
+                    calendarRef.current.getApi().gotoDate(target.value);
+                  }
+                  dateInput.removeEventListener('change', handleChange);
+                  if (dateInput.parentNode) {
+                    dateInput.parentNode.removeChild(dateInput);
+                  }
+                };
+                
+                dateInput.addEventListener('change', handleChange);
+                document.body.appendChild(dateInput);
+                if (dateInput.showPicker) {
+                  dateInput.showPicker();
+                } else {
+                  dateInput.click();
+                }
+              }
+            }
+          }}
           eventContent={(eventInfo: any) => (
             <RenderEventContent eventInfo={eventInfo} />
           )}
@@ -339,25 +406,14 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
             if(isPairDay) {
               const colorClass = isPairDay;
               const colorMap: {[key: string]: string} = {
-                "bg-one": "#fcc729",
-                "bg-two": "#ff8847",
-                "bg-three": "#c0c033",
-                "bg-four": "#32a852",
-                "bg-five": "#32a8a2",
-                "bg-six": "#327ba8",
-                "bg-seven": "#3244a8",
-                "bg-eight": "#5a32a8",
-                "bg-nine": "#a832a4",
-                "bg-ten": "#fffe88",
-                "bg-eleven": "#c2068a",
-                "bg-twelve": "#c28d06",
-                "bg-thirteen": "#a2c206",
-                "bg-fourteen": "#3bc206",
-                "bg-fifteen": "#108f7c",
+                "bg-shift-night": "#0D6EFD",
+                "bg-shift-day": "#0BA7AF",
+                "bg-shift-noon": "#FFC107",
+                "bg-shift-off": "#ADB5BD",
               };
               
               cellStyle = {
-                borderBottom: `4px solid ${colorMap[colorClass] || "#c2068a"}`
+                borderBottom: `4px solid ${colorMap[colorClass] || "#FFC107"}`
               };
             }
 
