@@ -356,8 +356,8 @@
   }
 
   .bg-ten {
-    background: #fffe88;
-    border: 1px solid #000000;
+    background: #d4b800;
+    border: 1px solid #ffffff;
 
     .fc-event-main {
       color: #000000 !important;
@@ -415,7 +415,7 @@
   }
 
   .bg-twenty-one {
-    background: #81f4cf;
+    background: #0d9488;
     border: 1px solid #ffffff;
   }
 
@@ -425,17 +425,17 @@
   }
 
   .bg-twenty-three {
-    background: #60d3e1;
+    background: #0891b2;
     border: 1px solid #ffffff;
   }
 
   .bg-twenty-four {
-    background: #8de149;
+    background: #65a30d;
     border: 1px solid #ffffff;
   }
 
   .bg-twenty-five {
-    background: #74db6c;
+    background: #16a34a;
     border: 1px solid #ffffff;
   }
 
@@ -455,7 +455,7 @@
   }
 
   .bg-twenty-nine {
-    background: #7ff932;
+    background: #4d7c0f;
     border: 1px solid #ffffff;
   }
 
@@ -470,7 +470,7 @@
   }
 
   .bg-thirty-two {
-    background: #52e6d3;
+    background: #0e7490;
     border: 1px solid #ffffff;
   }
 
@@ -485,7 +485,7 @@
   }
 
   .bg-thirty-five {
-    background: #c1e87c;
+    background: #84cc16;
     border: 1px solid #ffffff;
   }
 
@@ -640,11 +640,11 @@
 
 .event-popup {
   background: white;
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 0;
   min-width: 400px;
   max-width: 500px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   animation: popupSlide 0.3s ease-out;
 }
 
@@ -660,61 +660,106 @@
 }
 
 .popup-header {
-  background: linear-gradient(135deg, #19979c 0%, #15797d 100%);
+  background: transparent;
   color: white;
-  padding: 16px 20px;
-  border-radius: 12px 12px 0 0;
+  padding: 20px 24px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border-radius: 16px 16px 0 0;
 
   h3 {
     margin: 0;
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 600;
+    color: white;
   }
 
   .close-btn {
-    background: none;
+    background: rgba(255, 255, 255, 0.2);
     border: none;
     color: white;
-    font-size: 28px;
+    font-size: 24px;
     cursor: pointer;
     line-height: 1;
     padding: 0;
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
-    transition: background 0.2s;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.3);
+      color: white;
     }
   }
 }
 
 .popup-content {
-  padding: 20px;
+  padding: 24px;
 }
 
 .popup-row {
   display: flex;
-  padding: 10px 0;
-  border-bottom: 1px solid #eee;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f3f5;
   
   &:last-child {
     border-bottom: none;
   }
 
+  .popup-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+    color: #6C757D;
+    flex-shrink: 0;
+  }
+
   strong {
-    min-width: 110px;
-    color: #333;
-    font-weight: 600;
+    min-width: 100px;
+    color: #495057;
+    font-weight: 500;
+    font-size: 14px;
   }
 
   span {
-    color: #666;
+    color: #212529;
     flex: 1;
+    font-size: 14px;
+  }
+}
+
+.shift-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: capitalize;
+  
+  &.shift-day {
+    background: #0BA7AF;
+    color: white;
+  }
+  
+  &.shift-noon {
+    background: #FFC107;
+    color: #000000;
+  }
+  
+  &.shift-night {
+    background: #0D6EFD;
+    color: white;
+  }
+  
+  &.shift-off {
+    background: #ADB5BD;
+    color: white;
   }
 }
 

@@ -124,6 +124,55 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
     return 'bg-shift-day';
   };
 
+  const getStaffColor = (staffId: string) => {
+    if (!schedule?.staffs) return 'bg-one';
+    
+    const staffIndex = schedule.staffs.findIndex(s => s.id === staffId);
+    if (staffIndex === -1) return 'bg-one';
+    
+    const colorClasses = [
+      'bg-one', 'bg-two', 'bg-three', 'bg-four', 'bg-five',
+      'bg-six', 'bg-seven', 'bg-eight', 'bg-nine', 'bg-ten',
+      'bg-eleven', 'bg-twelve', 'bg-thirteen', 'bg-fourteen', 'bg-fifteen',
+      'bg-sixteen', 'bg-seventeen', 'bg-eighteen', 'bg-nineteen', 'bg-twenty',
+      'bg-twenty-one', 'bg-twenty-two', 'bg-twenty-three', 'bg-twenty-four', 'bg-twenty-five',
+      'bg-twenty-six', 'bg-twenty-seven', 'bg-twenty-eight', 'bg-twenty-nine', 'bg-thirty',
+      'bg-thirty-one', 'bg-thirty-two', 'bg-thirty-three', 'bg-thirty-four', 'bg-thirty-five',
+      'bg-thirty-six', 'bg-thirty-seven', 'bg-thirty-eight', 'bg-thirty-nine', 'bg-forty'
+    ];
+    
+    return colorClasses[staffIndex % colorClasses.length];
+  };
+
+  const getStaffColorHex = (staffId: string) => {
+    if (!schedule?.staffs) return '#fcc729';
+    
+    const staffIndex = schedule.staffs.findIndex(s => s.id === staffId);
+    if (staffIndex === -1) return '#fcc729';
+    
+    const colorHexes = [
+      '#fcc729', '#ff8847', '#c0c033', '#32a852', '#32a8a2',
+      '#327ba8', '#3244a8', '#5a32a8', '#a832a4', '#d4b800',
+      '#c2068a', '#c28d06', '#a2c206', '#3bc206', '#108f7c',
+      '#10278f', '#51108f', '#118f22', '#620878', '#40690a',
+      '#0d9488', '#09aa1d', '#0891b2', '#65a30d', '#16a34a',
+      '#47216b', '#447804', '#933862', '#4d7c0f', '#2a7626',
+      '#b6065f', '#0e7490', '#c8b062', '#a749b7', '#84cc16',
+      '#13249d', '#01c40b', '#2e6332', '#70ae19', '#b3524c'
+    ];
+    
+    return colorHexes[staffIndex % colorHexes.length];
+  };
+
+  const darkenColor = (hex: string, percent: number) => {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = Math.max(0, Math.min(255, (num >> 16) - amt));
+    const G = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) - amt));
+    const B = Math.max(0, Math.min(255, (num & 0x0000FF) - amt));
+    return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+  };
+
   const generateStaffBasedCalendar = () => {
     if(!schedule || !schedule.assignments) {
       setEvents([]);
@@ -146,6 +195,25 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
       const shiftName = shift?.name || "Shift";
       const colorClass = getShiftColor(shiftName, shift?.shiftStart, shift?.shiftEnd);
 
+      // Renk ataması
+      let backgroundColor = undefined;
+      let borderColor = undefined;
+      let textColor = undefined;
+      
+      if (colorClass === 'bg-shift-night') {
+        backgroundColor = '#191990';
+        borderColor = '#0a58ca';
+        textColor = '#ffffff';
+      } else if (colorClass === 'bg-shift-noon') {
+        backgroundColor = '#FFC107';  // Morning için sarı
+        borderColor = '#cc9a06';
+        textColor = '#000000';
+      } else if (colorClass === 'bg-shift-day') {
+        backgroundColor = '#955f1f';  // Day için turkuaz
+        borderColor = '#098a91';
+        textColor = '#ffffff';
+      }
+
       const work = {
         id: filteredAssignments[i]?.id,
         title: shiftName,
@@ -160,6 +228,9 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
             ? "highlight"
             : ""
         } ${!isValidDate ? "invalid-date" : ""}`,
+        backgroundColor: backgroundColor,
+        borderColor: borderColor,
+        textColor: textColor,
       };
       works.push(work);
     }
@@ -191,18 +262,11 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
         if(pair.startDate && pair.endDate) {
           const pairStaff = schedule?.staffs?.find(s => s.id === pair.pairStaffId);
           if(pairStaff) {
-            const pairShift = schedule?.assignments?.find(a => a.staffId === pair.pairStaffId);
-            let pairColor = 'bg-shift-noon';
-            if(pairShift) {
-              const shift = getShiftById(pairShift.shiftId);
-              if(shift) {
-                pairColor = getShiftColor(shift.name, shift.shiftStart, shift.shiftEnd);
-              }
-            }
+            const pairColorHex = getStaffColorHex(pair.pairStaffId);
             const pairDates = getDatesBetween(pair.startDate, pair.endDate);
             
             pairDates.forEach(date => {
-              pairColors[date] = pairColor;
+              pairColors[date] = pairColorHex;
             });
           }
         }
@@ -240,8 +304,7 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
       <div className="calendar-section">
         <div className="calendar-wrapper">
           <div style={{textAlign: 'center', padding: '40px', color: '#666'}}>
-          <h3>Loading schedule data...</h3>
-          <p>Please wait while we load the calendar information.</p>
+          <h3>Please wait loading calendar..</h3>
           </div>
         </div>
       </div>
@@ -253,24 +316,51 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
       {showPopup && selectedEvent && (
         <div className="event-popup-overlay" onClick={() => setShowPopup(false)}>
           <div className="event-popup" onClick={(e) => e.stopPropagation()}>
-            <div className="popup-header">
+            <div 
+              className="popup-header"
+              style={{
+                background: selectedEvent.staffColor 
+                  ? `linear-gradient(135deg, ${selectedEvent.staffColor} 0%, ${darkenColor(selectedEvent.staffColor, 20)} 100%)`
+                  : 'transparent'
+              }}
+            >
               <h3>Event Details</h3>
               <button className="close-btn" onClick={() => setShowPopup(false)}>×</button>
             </div>
             <div className="popup-content">
               <div className="popup-row">
+                <svg className="popup-icon" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                </svg>
                 <strong>Staff:</strong> <span>{selectedEvent.staffName}</span>
               </div>
               <div className="popup-row">
-                <strong>Shift:</strong> <span>{selectedEvent.shiftName}</span>
+                <svg className="popup-icon" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                </svg>
+                <strong>Shift:</strong> 
+                <span>
+                  <span className={`shift-badge ${selectedEvent.shiftClass || 'shift-day'}`}>
+                    {selectedEvent.shiftName}
+                  </span>
+                </span>
               </div>
               <div className="popup-row">
+                <svg className="popup-icon" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                </svg>
                 <strong>Date:</strong> <span>{selectedEvent.date}</span>
               </div>
               <div className="popup-row">
+                <svg className="popup-icon" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                </svg>
                 <strong>Start:</strong> <span>{selectedEvent.startTime}</span>
               </div>
               <div className="popup-row">
+                <svg className="popup-icon" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
+                </svg>
                 <strong>End:</strong> <span>{selectedEvent.endTime}</span>
               </div>
             </div>
@@ -279,25 +369,36 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
       )}
       <div className="calendar-wrapper">
         <div className="staff-list">
-          {schedule?.staffs?.map((staff: any) => (
-            <div
-              key={staff.id}
-              onClick={() => setSelectedStaffId(staff.id)}
-              className={`staff ${
-                staff.id === selectedStaffId ? "active" : ""
-              }`}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                height="20px"
-                viewBox="0 -960 960 960"
-                width="20px"
+          {schedule?.staffs?.map((staff: any) => {
+            const staffColor = getStaffColorHex(staff.id);
+            const isActive = staff.id === selectedStaffId;
+            return (
+              <div
+                key={staff.id}
+                onClick={() => setSelectedStaffId(staff.id)}
+                className={`staff ${getStaffColor(staff.id)} ${
+                  isActive ? "active" : ""
+                }`}
+                style={{
+                  borderColor: staffColor,
+                  ...(isActive ? {} : { color: staffColor })
+                }}
               >
-                <path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17-62.5t47-43.5q60-30 124.5-46T480-440q67 0 131.5 16T736-378q30 15 47 43.5t17 62.5v112H160Zm320-400q33 0 56.5-23.5T560-640q0-33-23.5-56.5T480-720q-33 0-56.5 23.5T400-640q0 33 23.5 56.5T480-560Zm160 228v92h80v-32q0-11-5-20t-15-14q-14-8-29.5-14.5T640-332Zm-240-21v53h160v-53q-20-4-40-5.5t-40-1.5q-20 0-40 1.5t-40 5.5ZM240-240h80v-92q-15 5-30.5 11.5T260-306q-10 5-15 14t-5 20v32Zm400 0H320h320ZM480-640Z" />
-              </svg>
-              <span>{staff.name}</span>
-            </div>
-          ))}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  height="20px"
+                  viewBox="0 -960 960 960"
+                  width="20px"
+                  style={{
+                    fill: isActive ? '#ffffff' : staffColor
+                  }}
+                >
+                  <path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17-62.5t47-43.5q60-30 124.5-46T480-440q67 0 131.5 16T736-378q30 15 47 43.5t17 62.5v112H160Zm320-400q33 0 56.5-23.5T560-640q0-33-23.5-56.5T480-720q-33 0-56.5 23.5T400-640q0 33 23.5 56.5T480-560Zm160 228v92h80v-32q0-11-5-20t-15-14q-14-8-29.5-14.5T640-332Zm-240-21v53h160v-53q-20-4-40-5.5t-40-1.5q-20 0-40 1.5t-40 5.5ZM240-240h80v-92q-15 5-30.5 11.5T260-306q-10 5-15 14t-5 20v32Zm400 0H320h320ZM480-640Z" />
+                </svg>
+                <span>{staff.name}</span>
+              </div>
+            );
+          })}
         </div>
         <FullCalendar
           ref={calendarRef}
@@ -328,10 +429,25 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
             datePicker: {
               text: 'Date',
               hint: 'Go to date',
-              click: function() {
+              click: function(ev: any) {
                 const dateInput = document.createElement('input');
                 dateInput.type = 'date';
-                dateInput.style.cssText = 'position:fixed;opacity:0;pointer-events:none;z-index:-1;';
+                
+                // Butonun konumunu al
+                const button = ev.target as HTMLElement;
+                const rect = button.getBoundingClientRect();
+                
+                // Input'u butonun konumuna göre yerleştir
+                dateInput.style.cssText = `
+                  position: fixed;
+                  top: ${rect.bottom + 5}px;
+                  left: ${rect.left}px;
+                  opacity: 0;
+                  pointer-events: none;
+                  z-index: -1;
+                  width: 0;
+                  height: 0;
+                `;
                 
                 const handleChange = (e: Event) => {
                   const target = e.target as HTMLInputElement;
@@ -346,11 +462,15 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
                 
                 dateInput.addEventListener('change', handleChange);
                 document.body.appendChild(dateInput);
-                if (dateInput.showPicker) {
-                  dateInput.showPicker();
-                } else {
-                  dateInput.click();
-                }
+                
+                // Kısa bir gecikme ile showPicker çağrılsın (konum ayarlansın diye)
+                setTimeout(() => {
+                  if (dateInput.showPicker) {
+                    dateInput.showPicker();
+                  } else {
+                    dateInput.click();
+                  }
+                }, 10);
               }
             }
           }}
@@ -404,16 +524,8 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
             
             let cellStyle = {};
             if(isPairDay) {
-              const colorClass = isPairDay;
-              const colorMap: {[key: string]: string} = {
-                "bg-shift-night": "#0D6EFD",
-                "bg-shift-day": "#0BA7AF",
-                "bg-shift-noon": "#FFC107",
-                "bg-shift-off": "#ADB5BD",
-              };
-              
               cellStyle = {
-                borderBottom: `4px solid ${colorMap[colorClass] || "#FFC107"}`
+                borderBottom: `4px solid ${isPairDay}`
               };
             }
 
@@ -434,10 +546,25 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
             const shift = getShiftById(event.extendedProps.shiftId);
             const staff = schedule?.staffs?.find(s => s.id === event.extendedProps.staffId);
             
+            const shiftColorClass = getShiftColor(shift?.name || '', shift?.shiftStart, shift?.shiftEnd);
+            let shiftClass = 'shift-day';
+            if (shiftColorClass === 'bg-shift-night') {
+              shiftClass = 'shift-night';
+            } else if (shiftColorClass === 'bg-shift-noon') {
+              shiftClass = 'shift-noon';
+            } else if (shiftColorClass === 'bg-shift-off') {
+              shiftClass = 'shift-off';
+            }
+            
+            const staffColor = getStaffColorHex(event.extendedProps.staffId);
+            
             setSelectedEvent({
               title: event.title,
               staffName: staff?.name,
+              staffId: event.extendedProps.staffId,
+              staffColor: staffColor,
               shiftName: shift?.name,
+              shiftClass: shiftClass,
               date: dayjs(event.start).format("DD.MM.YYYY"),
               startTime: dayjs(assignment?.shiftStart).format("HH:mm"),
               endTime: dayjs(assignment?.shiftEnd).format("HH:mm"),
