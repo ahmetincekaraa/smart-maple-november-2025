@@ -195,7 +195,6 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
       const shiftName = shift?.name || "Shift";
       const colorClass = getShiftColor(shiftName, shift?.shiftStart, shift?.shiftEnd);
 
-      // Renk ataması
       let backgroundColor = undefined;
       let borderColor = undefined;
       let textColor = undefined;
@@ -253,7 +252,6 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
       });
     }
 
-    // pair highlights hesaplama
     const selectedStaff = schedule?.staffs?.find(s => s.id === selectedStaffId);
     const pairColors: {[key: string]: string} = {};
     
@@ -280,8 +278,10 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
 
   useEffect(() => {
     if(schedule?.staffs && schedule.staffs.length > 0) {
-      const firstStaffId = schedule.staffs[0].id;
-      setSelectedStaffId(firstStaffId);
+      if(!selectedStaffId || !schedule.staffs.find(s => s.id === selectedStaffId)) {
+        const firstStaffId = schedule.staffs[0].id;
+        setSelectedStaffId(firstStaffId);
+      }
     }
   }, [schedule]);
 
@@ -290,6 +290,7 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
       generateStaffBasedCalendar();
     }
   }, [selectedStaffId, schedule]);
+
 
   const RenderEventContent = ({ eventInfo }: any) => {
     return (
@@ -433,11 +434,9 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
                 const dateInput = document.createElement('input');
                 dateInput.type = 'date';
                 
-                // Butonun konumunu al
                 const button = ev.target as HTMLElement;
                 const rect = button.getBoundingClientRect();
                 
-                // Input'u butonun konumuna göre yerleştir
                 dateInput.style.cssText = `
                   position: fixed;
                   top: ${rect.bottom + 5}px;
@@ -463,7 +462,6 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
                 dateInput.addEventListener('change', handleChange);
                 document.body.appendChild(dateInput);
                 
-                // Kısa bir gecikme ile showPicker çağrılsın (konum ayarlansın diye)
                 setTimeout(() => {
                   if (dateInput.showPicker) {
                     dateInput.showPicker();
@@ -487,6 +485,8 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
               ".fc-next-button"
             ) as HTMLButtonElement;
 
+            if (!prevButton || !nextButton) return;
+
             if (
               calendarRef?.current?.getApi().getDate() &&
               !dayjs(schedule.scheduleStartDate).isSame(
@@ -495,21 +495,16 @@ const CalendarContainer = ({ schedule, auth }: CalendarContainerProps) => {
             )
               setInitialDate(calendarRef?.current?.getApi().getDate());
 
-            const startDiff = dayjs(info.start)
-              .utc()
-              .diff(
-                dayjs(schedule.scheduleStartDate).subtract(1, "day").utc(),
-                "days"
-              );
-            const endDiff = dayjs(dayjs(schedule.scheduleEndDate)).diff(
-              info.end,
-              "days"
-            );
-            if (startDiff < 0 && startDiff > -35 && prevButton) prevButton.disabled = true;
-            else if(prevButton) prevButton.disabled = false;
-
-            if (endDiff < 0 && endDiff > -32 && nextButton) nextButton.disabled = true;
-            else if(nextButton) nextButton.disabled = false;
+            const currentViewMonth = dayjs(info.start).startOf('month');
+            
+            const scheduleStartMonth = dayjs.utc(schedule.scheduleStartDate).startOf('month');
+            const scheduleEndMonth = dayjs.utc(schedule.scheduleEndDate).endOf('month');
+            
+            const prevMonth = currentViewMonth.subtract(1, 'month');
+            prevButton.disabled = prevMonth.isBefore(scheduleStartMonth, 'month');
+            
+            const nextMonth = currentViewMonth.add(1, 'month');
+            nextButton.disabled = nextMonth.isAfter(scheduleEndMonth, 'month');
           }}
           dayCellContent={({ date }) => {
             const found = validDates().includes(
